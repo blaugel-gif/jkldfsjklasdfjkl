@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2A1B17">
+<title>Haltungscoach Gitarre</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎸</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Atkinson+Hyperlegible:wght@400;700&display=swap" rel="stylesheet">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon.svg">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Startseite -->
+<section id="home" class="screen active">
+  <header class="home-head">
+    <h1>Haltungs&shy;coach</h1>
+    <div class="strings" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+    <p class="lede">Die Kamera schaut dir beim Spielen zu und sagt dir, wann du verkrampfst.</p>
+  </header>
+
+  <nav class="modes">
+    <button class="mode" data-go="posture">
+      <strong>Haltung üben</strong>
+      <span>Handy 1,5–2 m entfernt, du sitzt frontal davor</span>
+    </button>
+    <button class="mode" data-go="songs">
+      <strong>Fingerspiel üben</strong>
+      <span>Handy nah an der Greifhand, mit Liedauswahl</span>
+    </button>
+    <button class="mode quiet" data-go="history">
+      <strong>Verlauf</strong>
+      <span>Noten, Fehler je Akkord, Export</span>
+    </button>
+  </nav>
+
+  <fieldset class="settings">
+    <legend>Einstellungen</legend>
+    <label class="row">
+      <span>Ich spiele als</span>
+      <select id="handedness">
+        <option value="right">Rechtshänder</option>
+        <option value="left">Linkshänder</option>
+      </select>
+    </label>
+    <label class="row">
+      <span>Hinweise vorlesen</span>
+      <input type="checkbox" id="voice" checked>
+    </label>
+  </fieldset>
+  <p class="fineprint">Alle Daten bleiben auf diesem Handy. Bei anhaltenden Schmerzen ersetzt die App keinen Blick von Physiotherapie oder Gitarrenlehrer.</p>
+</section>
+
+<!-- Liedauswahl -->
+<section id="songs" class="screen">
+  <header class="bar">
+    <button class="back" data-go="home" aria-label="Zurück">‹</button>
+    <h2>Was spielst du?</h2>
+  </header>
+  <div class="pad">
+    <ul id="songList" class="songlist"></ul>
+    <details class="addsong">
+      <summary>Neues Lied anlegen</summary>
+      <form id="songForm" novalidate>
+        <label>Titel <input name="songTitle" required autocomplete="off"></label>
+        <label>Interpret <input name="artist" autocomplete="off"></label>
+        <label>Akkorde in Spielreihenfolge
+          <textarea name="chords" rows="3" placeholder="G D Em C" required></textarea>
+        </label>
+        <p class="help">Deutsche Schreibweise: H statt B, B für englisch Bb. Möglich sind z. B. Am, G7, Cmaj7, Dsus4, G/H.</p>
+        <p id="songError" class="error" role="alert"></p>
+        <button type="submit" class="primary">Lied speichern</button>
+      </form>
+    </details>
+    <p class="help">Tipp: Schlag bei jedem Akkord alle Saiten an, die zum Griff gehören. Die App erkennt einzelne Anschläge mit kurzer Pause am besten.</p>
+  </div>
+</section>
+
+<!-- Übung -->
+<section id="session" class="screen session">
+  <div class="stage" id="stage">
+    <video id="video" playsinline muted></video>
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <header class="hud">
+    <span id="modeLabel"></span>
+    <span id="clock">0:00</span>
+    <span id="micLevel" class="mic" hidden><i></i></span>
+    <button id="flipCam" class="ghost" aria-label="Kamera wechseln">⇄</button>
+    <button id="stopBtn" class="stop">Beenden</button>
+  </header>
+
+  <div id="setupPanel" class="setup">
+    <h3 id="setupTitle">Aufstellung prüfen</h3>
+    <ul id="checkList"></ul>
+    <p id="setupMsg"></p>
+  </div>
+
+  <aside id="chordPanel" class="chordpanel" hidden>
+    <div class="now"><small>Jetzt</small><b id="chordNow"></b></div>
+    <div class="next"><small>Danach</small><b id="chordNext"></b></div>
+    <div id="diagram"></div>
+    <p id="strumMsg" class="strummsg"></p>
+  </aside>
+
+  <div id="hint" class="hint" aria-live="polite"></div>
+</section>
+
+<!-- Ergebnis -->
+<section id="result" class="screen">
+  <header class="bar"><h2>Deine Einheit</h2></header>
+  <div class="pad">
+    <div class="grade-hero">
+      <span id="gradeTotal" class="grade-big"></span>
+      <span id="gradeWord"></span>
+    </div>
+    <dl id="gradeDetails" class="grades"></dl>
+    <div id="chordResults"></div>
+    <label class="pain">
+      <span>Schmerzen jetzt im Arm (0 = keine, 10 = stark)</span>
+      <input type="range" id="pain" min="0" max="10" step="1" value="0">
+      <output id="painOut">0</output>
+    </label>
+    <label>Notiz <textarea id="notes" rows="2" placeholder="z. B. neuer Gurt, nach der Arbeit gespielt"></textarea></label>
+    <div class="actions">
+      <button id="saveResult" class="primary">Speichern</button>
+      <button id="discardResult" class="ghost-dark">Einheit löschen</button>
+    </div>
+  </div>
+</section>
+
+<!-- Verlauf -->
+<section id="history" class="screen">
+  <header class="bar">
+    <button class="back" data-go="home" aria-label="Zurück">‹</button>
+    <h2>Verlauf</h2>
+  </header>
+  <div class="pad">
+    <div id="chart" class="chart"></div>
+    <h3>Akkorde</h3>
+    <div class="tablewrap"><table id="chordStats"></table></div>
+    <h3>Einheiten</h3>
+    <ul id="sessionList" class="sessionlist"></ul>
+    <h3>Daten</h3>
+    <div class="exports">
+      <button data-export="json">Alles als JSON</button>
+      <button data-export="sessions">Einheiten als CSV</button>
+      <button data-export="posture_samples">Haltungswerte als CSV</button>
+      <button data-export="finger_events">Akkordfehler als CSV</button>
+      <label class="filebtn">JSON importieren<input type="file" id="importFile" accept="application/json"></label>
+      <button id="wipe" class="danger">Alle Daten löschen</button>
+    </div>
+  </div>
+</section>
+
+<div id="loading" class="loading" hidden><p id="loadingMsg">Lade Erkennung …</p></div>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
