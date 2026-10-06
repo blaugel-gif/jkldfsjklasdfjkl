@@ -32,6 +32,10 @@
       <strong>Fingerspiel üben</strong>
       <span>Handy nah an der Greifhand, mit Liedauswahl</span>
     </button>
+    <button class="mode" data-go="calibIntro">
+      <strong>Kalibrieren</strong>
+      <span id="calibState">Einmal einrichten: Ruhehaltung und Fehlstellungen zeigen</span>
+    </button>
     <button class="mode quiet" data-go="history">
       <strong>Verlauf</strong>
       <span>Noten, Fehler je Akkord, Export</span>
@@ -80,6 +84,36 @@
   </div>
 </section>
 
+<!-- Kalibrierung: Einführung -->
+<section id="calibIntro" class="screen">
+  <header class="bar">
+    <button class="back" data-go="home" aria-label="Zurück">‹</button>
+    <h2>Kalibrieren</h2>
+  </header>
+  <div class="pad">
+    <p>Die App lernt dabei, wie <em>deine</em> entspannte Haltung aussieht und wie deutlich eine Fehlstellung bei dir davon abweicht. Ohne das muss sie mit Durchschnittswerten raten.</p>
+    <p>Es dauert etwa drei Minuten. Du wirst durch zwölf Schritte geführt: viermal deine normale Haltung aus verschiedenen Abständen, dann sieben Fehlstellungen, die du <strong>absichtlich</strong> einnimmst, und zum Schluss noch einmal normal.</p>
+    <p class="help">Nimm die Gitarre dazu in die Hand und setz dich wie beim Üben. Wenn ein Schritt nicht klappt, kannst du ihn wiederholen oder überspringen.</p>
+    <div id="calibExisting" class="help"></div>
+    <button class="primary" id="calibStart">Kalibrierung starten</button>
+  </div>
+</section>
+
+<!-- Kalibrierung: Ergebnis -->
+<section id="calibResult" class="screen">
+  <header class="bar"><h2>Kalibrierung fertig</h2></header>
+  <div class="pad">
+    <p id="calibSummary"></p>
+    <ul id="calibReport" class="report"></ul>
+    <div class="actions">
+      <button id="calibSave" class="primary">Übernehmen</button>
+      <button id="calibExport" class="ghost-dark">Datei sichern</button>
+      <button id="calibRedo" class="ghost-dark">Noch einmal</button>
+    </div>
+    <p class="help">Die Datei enthält nur Messwerte in Zahlen, keine Bilder und kein Video. Schick sie mir im Chat, dann kann ich die Voreinstellungen für alle Schritte nachschärfen.</p>
+  </div>
+</section>
+
 <!-- Übung -->
 <section id="session" class="screen session">
   <div class="stage" id="stage">
@@ -107,6 +141,20 @@
     <div id="diagram"></div>
     <p id="strumMsg" class="strummsg"></p>
   </aside>
+
+  <div id="calibPanel" class="calibpanel" hidden>
+    <div class="progress"><i id="calibBar"></i></div>
+    <p class="stepno" id="calibStepNo"></p>
+    <h3 id="calibTitle"></h3>
+    <p id="calibInstr"></p>
+    <p id="calibCount" class="count"></p>
+    <p id="calibWarn" class="warn"></p>
+    <div class="calibbtns">
+      <button id="calibGo" class="primary">Bereit</button>
+      <button id="calibRepeat" class="ghost-dark">Wiederholen</button>
+      <button id="calibSkip" class="ghost-dark">Überspringen</button>
+    </div>
+  </div>
 
   <div id="hint" class="hint" aria-live="polite"></div>
 </section>

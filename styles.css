@@ -207,3 +207,29 @@ th { color: var(--nickel); font-weight: 400; font-size: 14px; }
 .loading p { font-family: var(--font-head); font-size: 22px; padding: 20px; text-align: center; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+/* Kalibrierung */
+.calibpanel {
+  position: absolute; z-index: 4; left: 10px; right: 10px;
+  top: calc(env(safe-area-inset-top, 0px) + 60px);
+  max-width: 520px; margin: 0 auto;
+  background: rgba(42, 27, 23, .93); border-radius: var(--radius-l); padding: 16px 18px;
+}
+.calibpanel[hidden] { display: none; }
+.calibpanel .progress { height: 5px; border-radius: 3px; background: rgba(235,217,180,.2); overflow: hidden; margin-bottom: 12px; }
+.calibpanel .progress i { display: block; height: 100%; background: var(--good); width: 0; transition: width .3s; }
+.calibpanel .stepno { margin: 0 0 2px; color: var(--nickel); font-size: 14px; }
+.calibpanel h3 { font-size: 24px; margin-bottom: 6px; }
+.calibpanel p { margin: 0 0 10px; }
+.calibpanel .count { font-family: var(--font-head); font-size: 44px; line-height: 1; margin: 6px 0 10px; font-variant-numeric: tabular-nums; }
+.calibpanel .count.rec { color: var(--bad); }
+.calibpanel .warn { color: var(--warn); min-height: 1.4em; font-size: 15px; }
+.calibbtns { display: flex; flex-wrap: wrap; gap: 8px; }
+.calibbtns button { font-size: 16px; padding: 11px 18px; }
+.report { list-style: none; padding: 0; margin: 0 0 18px; display: grid; gap: 8px; }
+.report li { display: grid; grid-template-columns: 14px 1fr; gap: 10px; align-items: baseline; }
+.report li::before { content: ''; width: 12px; height: 12px; border-radius: 50%; background: var(--good); transform: translateY(2px); }
+.report li.weak::before { background: var(--warn); }
+.report li.none::before { background: var(--bad); }
+.report small { display: block; color: var(--nickel); }
+#calibExisting:not(:empty) { margin: 14px 0; }

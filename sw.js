@@ -1,6 +1,6 @@
 // Speichert App und Erkennungsmodelle nach dem ersten Laden, damit sie auch offline starten
-const CACHE = 'gitarrencoach-v1';
-const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'db.js', 'chords.js', 'audio.js', 'vision.js', 'manifest.webmanifest'];
+const CACHE = 'gitarrencoach-v2';
+const SHELL = ['./', 'index.html', 'styles.css', 'app.js', 'db.js', 'chords.js', 'audio.js', 'vision.js', 'calib.js', 'manifest.webmanifest'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

@@ -15,6 +15,16 @@ Kamera und Mikrofon funktionieren im Browser nur über eine https-Adresse. GitHu
 
 Beim ersten Start lädt die App die Erkennungsmodelle (ca. 15 MB). Danach liegen sie im Speicher und die App startet schneller.
 
+## Kalibrieren (einmal vor der ersten Übung)
+
+Ohne Kalibrierung rechnet die App mit Durchschnittswerten. Mit Kalibrierung lernt sie, wie *deine* entspannte Haltung aussieht und wie weit eine Fehlstellung bei dir davon abweicht.
+
+Der Ablauf dauert etwa drei Minuten und hat zwölf Schritte: viermal deine normale Haltung aus verschiedenen Abständen, danach sieben Fehlstellungen, die du absichtlich einnimmst, und zum Schluss wieder normal. Jeder Schritt startet auf Knopfdruck, hat drei Sekunden Vorlauf und nimmt dann vier bis sechs Sekunden auf. Die Aufnahme pausiert automatisch, wenn du nicht vollständig im Bild bist.
+
+Am Ende steht, welche Fehlstellungen klar messbar waren. Mit **Übernehmen** gelten sie ab sofort. Mit **Datei sichern** bekommst du eine JSON-Datei mit allen Messwerten (keine Bilder, kein Video), die sich auswerten lässt, um die Voreinstellungen der App zu verbessern.
+
+Nach jeder Kalibrierung kannst du frei sitzen: Die Haltungswerte werden aus den 3D-Weltkoordinaten in Metern berechnet und sind deshalb unabhängig vom Abstand zur Kamera. Im Aufstellungs-Check zeigt die App den geschätzten Abstand in Metern an.
+
 ## Bedienung
 
 **Haltung üben:** Handy auf ein Stativ oder ins Regal stellen, 1,5–2 m entfernt, auf Brusthöhe, frontal. Die App prüft die Aufstellung, kalibriert sich 3 Sekunden auf deine entspannte Haltung und zeigt dann Hinweise, sobald ein Problem länger als 1,5 Sekunden anhält.
@@ -29,7 +39,8 @@ Beim ersten Start lädt die App die Erkennungsmodelle (ca. 15 MB). Danach liegen
 |---|---|
 | `index.html`, `styles.css` | Oberfläche |
 | `app.js` | Ablauf, Bewertung, Verlauf, Export |
-| `vision.js` | Körper- und Handerkennung, Grenzwerte (`LIMITS`) |
+| `vision.js` | Körper- und Handerkennung, Messwerte, Fehlstellungen, Voreinstellung (`DEFAULT_RULES`) |
+| `calib.js` | Kalibrierungsschritte, Statistik, Ableitung der Grenzwerte |
 | `audio.js` | Anschlag- und Akkorderkennung |
 | `chords.js` | Akkorde, Griffbilder |
 | `db.js` | Lokale Datenbank (gleiche Struktur wie das Supabase-Schema) |
@@ -37,11 +48,12 @@ Beim ersten Start lädt die App die Erkennungsmodelle (ca. 15 MB). Danach liegen
 
 ## Anpassen
 
-Die Grenzwerte stehen oben in `vision.js` unter `LIMITS`. Wenn dir die App zu streng oder zu nachsichtig ist, dort z. B. `wristFret: 40` (Grad Abknickung der Greifhand) ändern.
+Am einfachsten über die Kalibrierung. Wer von Hand nachstellen will: `DEFAULT_RULES` in `vision.js` enthält je Fehlstellung den Messwert und `delta`, also wie weit du von deiner Ruhehaltung abweichen darfst, bevor ein Hinweis kommt. Größeres `delta` = nachsichtiger.
 
 ## Grenzen
 
 - Die Erkennung arbeitet mit Schätzungen aus dem Kamerabild. Hinweise sind Anhaltspunkte, keine Messung wie im Labor.
 - Die Akkordprüfung funktioniert am besten mit einzelnen Anschlägen und kurzen Pausen, schlechter bei schnellem Wechsel oder Zupfmustern.
 - Wie fest du drückst, sieht die App nicht.
+- Fingerhaltung und Akkordfehler werden nicht mitkalibriert, dort gelten feste Werte.
 - Bei anhaltenden Schmerzen bitte ärztlich oder physiotherapeutisch abklären lassen.

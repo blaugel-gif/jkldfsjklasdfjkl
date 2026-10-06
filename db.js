@@ -1,8 +1,8 @@
 // Lokale Datenbank (IndexedDB). Struktur entspricht dem Supabase-Schema,
 // damit später eine Cloud-Synchronisation ohne Umbau möglich ist.
 const DB_NAME = 'gitarrencoach';
-const DB_VERSION = 1;
-const STORES = ['songs', 'sessions', 'setup_checks', 'posture_samples', 'finger_events'];
+const DB_VERSION = 2;
+const STORES = ['songs', 'sessions', 'setup_checks', 'posture_samples', 'finger_events', 'calibrations'];
 
 let dbPromise = null;
 
@@ -15,7 +15,7 @@ function open() {
       for (const name of STORES) {
         if (!db.objectStoreNames.contains(name)) {
           const store = db.createObjectStore(name, { keyPath: 'id' });
-          if (name !== 'songs' && name !== 'sessions') store.createIndex('session_id', 'session_id');
+          if (['setup_checks', 'posture_samples', 'finger_events'].includes(name)) store.createIndex('session_id', 'session_id');
           if (name === 'sessions') store.createIndex('started_at', 'started_at');
         }
       }
@@ -98,4 +98,10 @@ export async function requestPersistence() {
     if (navigator.storage && navigator.storage.persist) return await navigator.storage.persist();
   } catch (e) {}
   return false;
+}
+
+// Die zuletzt gespeicherte Kalibrierung ist die gültige
+export async function latestCalibration() {
+  const all = await getAll('calibrations');
+  return all.sort((a, b) => (b.created_at || '').localeCompare(a.created_at || ''))[0] || null;
 }
