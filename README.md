@@ -21,6 +21,24 @@ Ohne Kalibrierung rechnet die App mit Durchschnittswerten. Mit Kalibrierung lern
 
 Der Ablauf dauert etwa drei Minuten und hat zwölf Schritte: viermal deine normale Haltung aus verschiedenen Abständen, danach sieben Fehlstellungen, die du absichtlich einnimmst, und zum Schluss wieder normal. Jeder Schritt startet auf Knopfdruck, hat drei Sekunden Vorlauf und nimmt dann vier bis sechs Sekunden auf. Die Aufnahme pausiert automatisch, wenn du nicht vollständig im Bild bist.
 
+### Per Zuruf bedienen
+
+Weil du während der Kalibrierung zwei Meter vom Handy entfernt sitzt, lässt sich jeder Schritt per Sprache auslösen. Möglich sind:
+
+| Sagen | Wirkung |
+|---|---|
+| „weiter“, „bereit“, „los“, „ok“ | Schritt starten |
+| „wiederholen“, „nochmal“ | Aktuellen Schritt neu aufnehmen |
+| „zurück“ | Einen Schritt zurück |
+| „überspringen“ | Fehler-Schritt auslassen |
+| „abbrechen“, „stopp“ | Kalibrierung beenden |
+
+Während die App selbst spricht, hört sie nicht zu, damit sie nicht auf die eigene Ansage reagiert. Die Knöpfe funktionieren weiterhin.
+
+Die Spracherkennung des Browsers braucht Internet und gibt es nicht in jedem Browser. Fehlt sie, schaltet die App auf **zweimal Klatschen** um, was auch offline geht. Ein einzelner Impuls reicht dort absichtlich nicht, sonst würde jeder Gitarrenanschlag den nächsten Schritt starten. Während einer laufenden Aufnahme ist die Klatsch-Erkennung abgeschaltet.
+
+Abschalten lässt sich das Ganze auf dem Kalibrierbildschirm unter „Per Zuruf bedienen“.
+
 Am Ende steht, welche Fehlstellungen klar messbar waren. Mit **Übernehmen** gelten sie ab sofort. Mit **Datei sichern** bekommst du eine JSON-Datei mit allen Messwerten (keine Bilder, kein Video), die sich auswerten lässt, um die Voreinstellungen der App zu verbessern.
 
 Nach jeder Kalibrierung kannst du frei sitzen: Die Haltungswerte werden aus den 3D-Weltkoordinaten in Metern berechnet und sind deshalb unabhängig vom Abstand zur Kamera. Im Aufstellungs-Check zeigt die App den geschätzten Abstand in Metern an.
@@ -41,6 +59,7 @@ Nach jeder Kalibrierung kannst du frei sitzen: Die Haltungswerte werden aus den 
 | `app.js` | Ablauf, Bewertung, Verlauf, Export |
 | `vision.js` | Körper- und Handerkennung, Messwerte, Fehlstellungen, Voreinstellung (`DEFAULT_RULES`) |
 | `calib.js` | Kalibrierungsschritte, Statistik, Ableitung der Grenzwerte |
+| `listen.js` | Sprachbefehle und Klatsch-Erkennung |
 | `audio.js` | Anschlag- und Akkorderkennung |
 | `chords.js` | Akkorde, Griffbilder |
 | `db.js` | Lokale Datenbank (gleiche Struktur wie das Supabase-Schema) |
@@ -56,4 +75,6 @@ Am einfachsten über die Kalibrierung. Wer von Hand nachstellen will: `DEFAULT_R
 - Die Akkordprüfung funktioniert am besten mit einzelnen Anschlägen und kurzen Pausen, schlechter bei schnellem Wechsel oder Zupfmustern.
 - Wie fest du drückst, sieht die App nicht.
 - Fingerhaltung und Akkordfehler werden nicht mitkalibriert, dort gelten feste Werte.
+- Der Zuruf ist nur in der Kalibrierung aktiv, nicht beim normalen Üben.
+- Die Klatsch-Erkennung kann von anderen kurzen, scharfen Geräuschen ausgelöst werden. Schlimmstenfalls startet ein Schritt zu früh, dann hilft „wiederholen“.
 - Bei anhaltenden Schmerzen bitte ärztlich oder physiotherapeutisch abklären lassen.

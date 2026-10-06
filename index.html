@@ -94,6 +94,11 @@
     <p>Die App lernt dabei, wie <em>deine</em> entspannte Haltung aussieht und wie deutlich eine Fehlstellung bei dir davon abweicht. Ohne das muss sie mit Durchschnittswerten raten.</p>
     <p>Es dauert etwa drei Minuten. Du wirst durch zwölf Schritte geführt: viermal deine normale Haltung aus verschiedenen Abständen, dann sieben Fehlstellungen, die du <strong>absichtlich</strong> einnimmst, und zum Schluss noch einmal normal.</p>
     <p class="help">Nimm die Gitarre dazu in die Hand und setz dich wie beim Üben. Wenn ein Schritt nicht klappt, kannst du ihn wiederholen oder überspringen.</p>
+    <label class="row">
+      <span>Per Zuruf bedienen</span>
+      <input type="checkbox" id="handsfree" checked>
+    </label>
+    <p class="help">Damit startest du jeden Schritt mit „weiter“, statt zum Handy zu laufen. Weitere Befehle: „wiederholen“, „zurück“, „überspringen“, „abbrechen“. Wenn die Spracherkennung nicht geht, zählt stattdessen einmal Klatschen.</p>
     <div id="calibExisting" class="help"></div>
     <button class="primary" id="calibStart">Kalibrierung starten</button>
   </div>
@@ -149,9 +154,11 @@
     <p id="calibInstr"></p>
     <p id="calibCount" class="count"></p>
     <p id="calibWarn" class="warn"></p>
+    <p id="calibVoice" class="voicebar" hidden><span class="dot"></span><span id="calibVoiceMsg"></span></p>
     <div class="calibbtns">
       <button id="calibGo" class="primary">Bereit</button>
       <button id="calibRepeat" class="ghost-dark">Wiederholen</button>
+      <button id="calibBack" class="ghost-dark">Zurück</button>
       <button id="calibSkip" class="ghost-dark">Überspringen</button>
     </div>
   </div>

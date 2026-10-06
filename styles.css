@@ -224,8 +224,12 @@ th { color: var(--nickel); font-weight: 400; font-size: 14px; }
 .calibpanel .count { font-family: var(--font-head); font-size: 44px; line-height: 1; margin: 6px 0 10px; font-variant-numeric: tabular-nums; }
 .calibpanel .count.rec { color: var(--bad); }
 .calibpanel .warn { color: var(--warn); min-height: 1.4em; font-size: 15px; }
-.calibbtns { display: flex; flex-wrap: wrap; gap: 8px; }
+.calibbtns { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .calibbtns button { font-size: 16px; padding: 11px 18px; }
+/* Nebenknöpfe kleiner, damit alle vier in eine Zeile passen */
+.calibbtns .ghost-dark { font-size: 14px; padding: 8px 14px; }
+.calibpanel h3 { font-size: 22px; }
+.calibpanel p { margin: 0 0 8px; }
 .report { list-style: none; padding: 0; margin: 0 0 18px; display: grid; gap: 8px; }
 .report li { display: grid; grid-template-columns: 14px 1fr; gap: 10px; align-items: baseline; }
 .report li::before { content: ''; width: 12px; height: 12px; border-radius: 50%; background: var(--good); transform: translateY(2px); }
@@ -233,3 +237,14 @@ th { color: var(--nickel); font-weight: 400; font-size: 14px; }
 .report li.none::before { background: var(--bad); }
 .report small { display: block; color: var(--nickel); }
 #calibExisting:not(:empty) { margin: 14px 0; }
+
+/* Hörstatus bei der Kalibrierung */
+.voicebar { display: flex; align-items: center; gap: 9px; font-size: 15px; color: var(--nickel); margin: 0 0 10px; }
+.voicebar[hidden] { display: none; }
+.voicebar .dot { flex: none; width: 11px; height: 11px; border-radius: 50%; background: var(--good); }
+.voicebar.listening .dot { animation: pulse 1.6s ease-in-out infinite; }
+.voicebar.off .dot { background: var(--nickel); }
+.voicebar.heard { color: var(--spruce); }
+.voicebar.heard .dot { background: var(--spruce); }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
+@media (prefers-reduced-motion: reduce) { .voicebar.listening .dot { animation: none; } }

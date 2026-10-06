@@ -6,8 +6,9 @@ import {
   FAULTS, CATEGORIES, setupChecks, frameBrightness, pickHand, fingerIssues, drawPose, drawHand, poseModelUsed,
 } from './vision.js';
 import { CALIB_STEPS, summarize, deriveRules, buildExport } from './calib.js';
+import { VoiceCommands, ClapDetector, speechSupported } from './listen.js';
 
-const APP_VERSION = '2.0';
+const APP_VERSION = '2.1';
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
@@ -15,6 +16,7 @@ const $$ = s => [...document.querySelectorAll(s)];
 const settings = {
   get leftHanded() { return safeGet('hand') === 'left'; },
   get voice() { return safeGet('voice') !== 'off'; },
+  get handsfree() { return safeGet('handsfree') !== 'off'; },
 };
 function safeGet(k) { try { return localStorage.getItem('gc_' + k); } catch { return null; } }
 function safeSet(k, v) { try { localStorage.setItem('gc_' + k, v); } catch {} }
@@ -23,6 +25,8 @@ $('#handedness').value = settings.leftHanded ? 'left' : 'right';
 $('#voice').checked = settings.voice;
 $('#handedness').addEventListener('change', e => safeSet('hand', e.target.value));
 $('#voice').addEventListener('change', e => safeSet('voice', e.target.checked ? 'on' : 'off'));
+$('#handsfree').checked = settings.handsfree;
+$('#handsfree').addEventListener('change', e => safeSet('handsfree', e.target.checked ? 'on' : 'off'));
 db.requestPersistence();
 
 // Persönliche Grenzwerte aus der letzten Kalibrierung
@@ -70,8 +74,80 @@ function speak(text, force) {
   lastSpoken = { text, at: now };
   const u = new SpeechSynthesisUtterance(text.replace(/–/g, ','));
   u.lang = 'de-DE';
+  // Obergrenze, falls das Ende-Ereignis ausbleibt; sonst gibt onend früher wieder frei
+  muteListener(Math.min(900 + text.length * 70, 12000));
+  u.onend = u.onerror = () => releaseListener(400);
   speechSynthesis.cancel();
   speechSynthesis.speak(u);
+}
+
+// ---------- Freihändige Bedienung ----------
+let listener = null;      // VoiceCommands oder ClapDetector
+let listenerKind = '';    // 'sprache' | 'klatschen' | ''
+
+const VOICE_HELP = 'Sag „weiter“, „wiederholen“ oder „zurück“';
+function muteListener(ms) { if (listener) listener.mute(ms); }
+function releaseListener(ms) { if (listener) listener.release(ms); }
+
+function setVoiceBar(state, msg) {
+  const bar = $('#calibVoice');
+  bar.hidden = !msg;
+  bar.className = 'voicebar ' + state;
+  $('#calibVoiceMsg').textContent = msg || '';
+}
+
+async function startListening() {
+  stopListening();
+  if (!settings.handsfree) { setVoiceBar('off', 'Zuruf ist aus – mit den Knöpfen weiter'); return; }
+
+  if (speechSupported()) {
+    listener = new VoiceCommands(onVoiceCommand, st => {
+      if (st.ok) setVoiceBar('listening', VOICE_HELP);
+      else if (st.reason === 'offline') setVoiceBar('off', 'Spracherkennung braucht Internet – klatsche stattdessen einmal');
+      else if (st.reason === 'verweigert') { listener = null; startClapping('Mikrofon nicht erlaubt – bitte die Knöpfe nutzen'); }
+    });
+    listenerKind = 'sprache';
+    if (listener.start()) return;
+    listener = null;
+  }
+  await startClapping();
+}
+
+async function startClapping(why) {
+  try {
+    const cd = new ClapDetector(() => onVoiceCommand('go'));
+    await cd.start();
+    listener = cd;
+    listenerKind = 'klatschen';
+    setVoiceBar('listening', 'Zweimal klatschen, um weiterzumachen');
+  } catch {
+    listener = null;
+    listenerKind = '';
+    setVoiceBar('off', why || 'Zuruf geht auf diesem Gerät nicht – bitte die Knöpfe nutzen');
+  }
+}
+
+function stopListening() {
+  if (listener) { try { listener.stop(); } catch {} }
+  listener = null;
+  listenerKind = '';
+}
+
+function onVoiceCommand(cmd) {
+  if (!S || S.mode !== 'kalibrierung') return;
+  const label = { go: 'weiter', repeat: 'wiederholen', back: 'Schritt zurück', skip: 'überspringen', stop: 'abbrechen' }[cmd];
+  setVoiceBar('heard', `Verstanden: ${label}`);
+  setTimeout(() => {
+    if (listener) setVoiceBar('listening', listenerKind === 'klatschen'
+      ? 'Zweimal klatschen, um weiterzumachen'
+      : VOICE_HELP);
+  }, 1600);
+
+  if (cmd === 'go') calibGo();
+  else if (cmd === 'repeat') calibRepeat();
+  else if (cmd === 'back') calibBack();
+  else if (cmd === 'skip') { if (!S.cCurrent || !S.cCurrent.group) calibSkip(); }
+  else if (cmd === 'stop') { stopListening(); stopMedia(); S = null; show('home'); }
 }
 
 function setHint(text, kind) {
@@ -206,6 +282,7 @@ $('#flipCam').addEventListener('click', async () => {
 });
 
 function stopMedia() {
+  stopListening();
   if (!S) return;
   cancelAnimationFrame(S.raf);
   if (S.stream) S.stream.getTracks().forEach(t => t.stop());
@@ -250,7 +327,14 @@ function poseFrame(now, w, h) {
         shoulder_width_px: Math.round(m.imgShoulderWidth * w),
         brightness: Math.round(S.brightness * 100) / 100, all_visible: true, passed: true,
       };
-      if (S.mode === 'kalibrierung') { S.phase = 'calib_run'; $('#setupPanel').hidden = true; $('#calibPanel').hidden = false; S.startedAt = Date.now(); prepStep(0); }
+      if (S.mode === 'kalibrierung') {
+        S.phase = 'calib_run';
+        $('#setupPanel').hidden = true;
+        $('#calibPanel').hidden = false;
+        S.startedAt = Date.now();
+        startListening().then(() => { if (S) S.inputKind = listenerKind || 'knöpfe'; });
+        prepStep(0);
+      }
       else {
         S.phase = 'base'; S.baseStart = now;
         $('#setupTitle').textContent = 'Ruhehaltung aufnehmen';
@@ -357,21 +441,39 @@ function prepStep(i) {
   $('#calibCount').className = 'count';
   $('#calibWarn').textContent = '';
   $('#calibGo').textContent = step.move ? 'Handy steht – los' : 'Bereit';
+  if (listener) listener.setPaused(false);
   $('#calibGo').hidden = false;
-  $('#calibRepeat').hidden = i === 0;
+  $('#calibRepeat').hidden = false;
+  $('#calibBack').hidden = i === 0;
   $('#calibSkip').hidden = !!step.group;
   speak(step.instr, true);
 }
 
-$('#calibGo').addEventListener('click', () => {
+function calibGo() {
   if (!S || S.cPhase !== 'wait') return;
   S.cPhase = 'ready';
   S.cUntil = performance.now() + 3000;
   S.cFrames[S.cCurrent.key] = [];
   $('#calibGo').hidden = true;
-});
-$('#calibRepeat').addEventListener('click', () => { if (S) { delete S.cFrames[CALIB_STEPS[S.cStep].key]; prepStep(S.cStep); } });
-$('#calibSkip').addEventListener('click', () => { if (S) nextStep(); });
+  // Beim Klatschen während der Aufnahme pausieren, sonst zählt jeder Anschlag als Befehl
+  if (listener) listener.setPaused(true);
+}
+function calibRepeat() {
+  if (!S || S.phase !== 'calib_run') return;
+  delete S.cFrames[CALIB_STEPS[S.cStep].key];
+  prepStep(S.cStep);
+}
+function calibSkip() { if (S && S.phase === 'calib_run') nextStep(); }
+function calibBack() {
+  if (!S || S.phase !== 'calib_run' || S.cStep === 0) return;
+  delete S.cFrames[CALIB_STEPS[S.cStep].key];
+  prepStep(S.cStep - 1);
+}
+
+$('#calibGo').addEventListener('click', calibGo);
+$('#calibRepeat').addEventListener('click', calibRepeat);
+$('#calibSkip').addEventListener('click', calibSkip);
+$('#calibBack').addEventListener('click', calibBack);
 
 function nextStep() {
   if (S.cStep + 1 >= CALIB_STEPS.length) finishCalibration();
@@ -421,6 +523,7 @@ async function finishCalibration() {
     app_version: APP_VERSION, pose_model: poseModelUsed,
     left_handed: settings.leftHanded,
     camera_facing: S.facing,
+    eingabe: S.inputKind || 'knöpfe',
     video: `${video.videoWidth}x${video.videoHeight}`,
     user_agent: navigator.userAgent,
     screen: `${screen.width}x${screen.height}@${devicePixelRatio}`,
