@@ -1,14 +1,16 @@
 import * as db from './db.js';
 import { parseChord, parseChordList, chordDiagramSVG, stringsForPitchClass, STRING_LABELS } from './chords.js';
+import { byCategory, findSong, LEVEL_LABEL } from './songbook.js';
 import { AudioAnalyzer, evaluateStrum } from './audio.js';
 import {
   getPoseLandmarker, getHandLandmarker, poseMetrics, METRIC_KEYS, evaluateRules, DEFAULT_RULES,
-  FAULTS, CATEGORIES, setupChecks, frameBrightness, pickHand, fingerIssues, drawPose, drawHand, poseModelUsed,
+  FAULTS, FAULT_TAGS, CATEGORIES, setupChecks, frameBrightness, pickHand, fingerIssues,
+  drawPose, drawHand, drawLabels, faultAnchor, poseModelUsed,
 } from './vision.js';
 import { CALIB_STEPS, summarize, deriveRules, buildExport } from './calib.js';
 import { VoiceCommands, ClapDetector, speechSupported } from './listen.js';
 
-const APP_VERSION = '2.1';
+const APP_VERSION = '2.2';
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
 
@@ -157,7 +159,51 @@ function setHint(text, kind) {
 }
 
 // ---------- Lieder ----------
+let pickLevel = '';
+
+function renderPicker() {
+  const sel = $('#songPick');
+  const keep = sel.value;
+  sel.innerHTML = '<option value="">– auswählen –</option>' + byCategory().map(c => {
+    const songs = c.songs.filter(s => !pickLevel || String(s.level) === pickLevel);
+    if (!songs.length) return '';
+    return `<optgroup label="${esc(c.label)}">` + songs.map(s =>
+      `<option value="${s.id}">${esc(s.title)} · ${esc(LEVEL_LABEL[s.level])}</option>`).join('') + '</optgroup>';
+  }).join('');
+  sel.value = [...sel.options].some(o => o.value === keep) ? keep : '';
+  renderPreview();
+}
+
+function renderPreview() {
+  const song = findSong($('#songPick').value);
+  const box = $('#songPreview');
+  box.hidden = !song;
+  if (!song) return;
+  $('#previewNote').textContent = song.note || `${song.chords.length} Akkorde, ${LEVEL_LABEL[song.level]}.`;
+  // Doppelte Griffbilder sparen Platz: gleiche Folge, aber jeder Griff nur einmal gezeigt
+  const seen = [];
+  for (const name of song.chords) if (!seen.includes(name)) seen.push(name);
+  $('#previewChords').innerHTML = seen.map(name => {
+    const c = parseChord(name);
+    return `<figure>${chordDiagramSVG(c)}<figcaption>${esc(name)}</figcaption></figure>`;
+  }).join('');
+  // Die Reihenfolge steht unter den Griffbildern, nicht im scrollenden Bereich
+  $('#previewOrder').textContent = 'Reihenfolge: ' + song.chords.join(' – ');
+}
+
+$('#songPick').addEventListener('change', renderPreview);
+$$('.levelfilter button').forEach(b => b.addEventListener('click', () => {
+  pickLevel = b.dataset.level;
+  $$('.levelfilter button').forEach(x => x.classList.toggle('on', x === b));
+  renderPicker();
+}));
+$('#songStart').addEventListener('click', () => {
+  const song = findSong($('#songPick').value);
+  if (song) startSession('finger', { id: song.id, title: song.title, chords: song.chords, fromBook: true });
+});
+
 async function renderSongs() {
+  renderPicker();
   const songs = (await db.getAll('songs')).sort((a, b) => a.title.localeCompare(b.title, 'de'));
   const ul = $('#songList');
   ul.innerHTML = `<li class="song free"><button class="pick" data-song="">
@@ -219,6 +265,7 @@ async function startSession(mode, song) {
     facing: 'user', raf: 0, wakeLock: null,
     // Kalibrierung
     cStep: 0, cPhase: 'wait', cFrames: {}, cUntil: 0, cCurrent: null,
+    pose: null, poseBase: [], poseLast: null, poseAt: 0, poseActive: null, poseImage: null,
   };
 
   show('session');
@@ -239,6 +286,11 @@ async function startSession(mode, song) {
     await startCamera();
     $('#loadingMsg').textContent = 'Erkennung wird geladen …';
     S.detector = mode === 'finger' ? await getHandLandmarker() : await getPoseLandmarker();
+    if (mode === 'finger') {
+      // Zusätzlich die Körpererkennung, damit auch im Fingermodus Haltungsfehler auffallen,
+      // sofern genug vom Oberkörper im Bild ist
+      try { S.pose = await getPoseLandmarker(); } catch { S.pose = null; }
+    }
     if (audio) {
       $('#loadingMsg').textContent = 'Mikrofon wird gestartet …';
       await audio.start();
@@ -373,6 +425,14 @@ function poseFrame(now, w, h) {
   S.lastSeen = now;
   const active = evaluateRules(S.rules, m, S.base);
   drawPose(octx, image, w, h, active, settings.leftHanded);
+  const labels = [];
+  for (const [fault, on] of Object.entries(active)) {
+    if (!on) continue;
+    const at = faultAnchor(fault, image, settings.leftHanded);
+    if (at) labels.push({ ...at, text: FAULT_TAGS[fault] || FAULTS[fault].label });
+  }
+  drawLabels(octx, labels, w, h, S.facing === 'user');
+  overlay.dataset.labels = labels.length;
 
   const byCat = {};
   for (const [fault, on] of Object.entries(active)) {
@@ -560,39 +620,99 @@ const FINGER_HINTS = {};
 function fingerFrame(now, w, h) {
   const res = S.detector.detectForVideo(video, now);
   const hand = pickHand(res);
+  const mirrored = S.facing === 'user';
 
   if (S.phase === 'setup') {
     drawHand(octx, hand, w, h, []);
+    const body = posePeek(now, w, h);   // beim Einrichten jedes Bild
     const checks = [
       { label: 'Licht', ok: S.brightness > 0.22, hint: 'Zu dunkel – mehr Licht machen' },
       { label: 'Greifhand im Bild', ok: !!hand, hint: 'Kamera nah an die Greifhand, Griffbrett und Finger im Bild' },
     ];
-    $('#checkList').innerHTML = checks.map(c => `<li class="${c.ok ? 'ok' : ''}">${esc(c.label)}</li>`).join('');
-    if (!checks.every(c => c.ok)) { S.okSince = 0; $('#setupMsg').textContent = checks.find(c => !c.ok).hint; return; }
+    $('#checkList').innerHTML = checks.map(c => `<li class="${c.ok ? 'ok' : ''}">${esc(c.label)}</li>`).join('')
+      + `<li class="${body ? 'ok' : 'opt'}">Oberkörper im Bild <small>${body ? 'Haltung wird mitgeprüft' : 'freiwillig – ohne das nur die Finger'}</small></li>`;
+    if (!checks.every(c => c.ok)) { S.okSince = 0; S.poseBase = []; $('#setupMsg').textContent = checks.find(c => !c.ok).hint; return; }
     S.okSince ||= now;
+    if (body && S.poseAt !== S.poseBaseAt) { S.poseBase.push(body.m); S.poseBaseAt = S.poseAt; }
     $('#setupMsg').textContent = 'Passt. Gleich geht es los …';
-    if (now - S.okSince > 1200) {
+    if (now - S.okSince > 1800) {
       S.setupRecord = { session_id: S.id, distance_m: null, brightness: Math.round(S.brightness * 100) / 100, all_visible: true, passed: true };
+      // Nur mit genug ruhigen Messungen lässt sich die Haltung sinnvoll vergleichen
+      S.base = S.poseBase.length >= 12 ? averageMetrics(S.poseBase) : null;
       S.phase = 'run';
       S.startedAt = Date.now();
       $('#setupPanel').hidden = true;
       setHint('Los geht’s', 'good');
-      speak('Los geht’s');
+      speak(S.base ? 'Los geht’s. Haltung wird mitgeprüft.' : 'Los geht’s');
     }
     return;
   }
 
   const issues = hand ? fingerIssues(hand) : [];
   drawHand(octx, hand, w, h, issues);
+
+  // Haltung mitprüfen, wenn beim Start genug vom Körper zu sehen war
+  const labels = [];
+  if (S.base) {
+    const body = posePeek(now, w, h, 150);   // beim Üben seltener, das spart Rechenzeit
+    if (body) {
+      S.poseActive = evaluateRules(S.rules, body.m, S.base);
+      S.poseImage = body.image;
+      for (const [cat, keys] of Object.entries(groupByCategory(S.poseActive))) {
+        const c = S.counts[cat] ||= { ok: 0, bad: 0 };
+        keys.some(Boolean) ? c.bad++ : c.ok++;
+      }
+    }
+    if (S.poseActive && S.poseImage) {
+      for (const [fault, on] of Object.entries(S.poseActive)) {
+        if (!on) continue;
+        const at = faultAnchor(fault, S.poseImage, settings.leftHanded);
+        if (at) labels.push({ ...at, text: FAULT_TAGS[fault] || FAULTS[fault].label });
+      }
+    }
+  }
+  for (const is of issues) {
+    const a = is.anchor !== undefined && hand ? hand.lm[is.anchor] : null;
+    if (a) labels.push({ x: a.x, y: a.y, text: FAULT_TAGS[is.key] || '' });
+  }
+  drawLabels(octx, labels, w, h, mirrored);
+  overlay.dataset.labels = labels.length;
+
   if (!hand) { if (now - S.lastSeen > 2000 && now > S.strumMsgUntil) setHint('Greifhand nicht im Bild', 'info'); return; }
   S.lastSeen = now;
   const c = S.counts.fingerhaltung ||= { ok: 0, bad: 0 };
   issues.length ? c.bad++ : c.ok++;
   if (issues.length) S.recentHandIssue = { key: issues[0].key, at: now };
+
   const flags = {};
-  for (const is of issues) { flags[is.key] = true; FINGER_HINTS[is.key] = is.text; }
+  const texts = { ...FINGER_HINTS };
+  for (const is of issues) { flags[is.key] = true; texts[is.key] = is.text; FINGER_HINTS[is.key] = is.text; }
   for (const k of Object.keys(FINGER_HINTS)) flags[k] ||= false;
-  updatePersistentHint(flags, FINGER_HINTS, now);
+  // Haltungsfehler mit denselben Worten wie im Haltungsmodus
+  if (S.poseActive) for (const [fault, on] of Object.entries(S.poseActive)) { flags[fault] = on; texts[fault] = FAULTS[fault].hint; }
+  updatePersistentHint(flags, texts, now);
+}
+
+// Körpererkennung im Fingermodus nur alle paar Bilder, das spart Rechenzeit
+function posePeek(now, w, h, every) {
+  if (!S.pose) return null;
+  if (every && now - (S.poseAt || 0) < every) return S.poseLast || null;
+  S.poseAt = now;
+  const res = S.pose.detectForVideo(video, now + 0.5);
+  const image = res.landmarks && res.landmarks[0];
+  const world = res.worldLandmarks && res.worldLandmarks[0];
+  const m = image && world ? poseMetrics(world, image, w / h, settings.leftHanded) : null;
+  S.poseLast = m && m.visibility > 0.7 ? { m, image } : null;
+  return S.poseLast;
+}
+
+function groupByCategory(active) {
+  const by = {};
+  for (const [fault, on] of Object.entries(active)) {
+    const cat = FAULTS[fault].category;
+    (by[cat] ||= []).push(on);
+  }
+  return by;
 }
 
 function renderChordPanel(highlight = []) {

@@ -66,9 +66,30 @@
     <h2>Was spielst du?</h2>
   </header>
   <div class="pad">
+    <div class="picker">
+      <label>Lied aus dem Fundus
+        <select id="songPick">
+          <option value="">– auswählen –</option>
+        </select>
+      </label>
+      <div class="levelfilter" role="group" aria-label="Schwierigkeit">
+        <button type="button" data-level="" class="on">alle</button>
+        <button type="button" data-level="1">leicht</button>
+        <button type="button" data-level="2">mittel</button>
+        <button type="button" data-level="3">mit Barré</button>
+      </div>
+      <div id="songPreview" class="preview" hidden>
+        <p id="previewNote" class="help"></p>
+        <div id="previewChords" class="chordrow"></div>
+        <p id="previewOrder" class="order"></p>
+        <button id="songStart" class="primary">Diese Folge üben</button>
+      </div>
+    </div>
+
+    <h3 class="sub">Oder</h3>
     <ul id="songList" class="songlist"></ul>
     <details class="addsong">
-      <summary>Neues Lied anlegen</summary>
+      <summary>Eigenes Lied anlegen</summary>
       <form id="songForm" novalidate>
         <label>Titel <input name="songTitle" required autocomplete="off"></label>
         <label>Interpret <input name="artist" autocomplete="off"></label>

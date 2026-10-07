@@ -47,7 +47,17 @@ Nach jeder Kalibrierung kannst du frei sitzen: Die Haltungswerte werden aus den 
 
 **Haltung üben:** Handy auf ein Stativ oder ins Regal stellen, 1,5–2 m entfernt, auf Brusthöhe, frontal. Die App prüft die Aufstellung, kalibriert sich 3 Sekunden auf deine entspannte Haltung und zeigt dann Hinweise, sobald ein Problem länger als 1,5 Sekunden anhält.
 
-**Fingerspiel üben:** Handy nah an der Greifhand, sodass Finger und Griffbrett gut zu sehen sind. Ein Lied mit Akkordfolge wählen. Die App hört über das Mikrofon, ob der Akkord sauber klingt, zeigt das Griffbild und markiert die Saite, die nicht klingt. Gitarre vorher stimmen, sonst erkennt sie Töne falsch.
+**Fingerspiel üben:** Handy nah an der Greifhand, sodass Finger und Griffbrett gut zu sehen sind. Ein Lied wählen, dann prüft die App über das Mikrofon, ob der Akkord sauber klingt, zeigt das Griffbild und markiert die Saite, die nicht klingt. Gitarre vorher stimmen, sonst erkennt sie Töne falsch.
+
+Die Greifhand wird dabei auf flache Finger, einen abstehenden kleinen Finger und einen über den Hals gehakten Daumen geprüft. Ist beim Einrichten genug vom Oberkörper im Bild, prüft die App zusätzlich die Körperhaltung mit und nimmt sie in die Note auf. Steht das Handy zu nah, bleibt es bei den Fingern; der Aufstellungs-Check sagt, was gerade gilt.
+
+**Korrekturhinweise im Video:** In beiden Modi wird jeder erkannte Fehler direkt an der betroffenen Stelle im Bild beschriftet, etwa „Daumen runter“ am Daumen oder „Schultern locker“ an der Schulterlinie. Der ausführliche Hinweis steht zusätzlich groß am unteren Rand.
+
+### Liederfundus
+
+Oben auf dem Lied-Bildschirm steht ein Auswahlfeld mit 48 fertigen Akkordfolgen, nach Schwierigkeit filterbar: Übungen und Akkordwechsel, Kinder- und Volkslieder, Folk und Traditionals, Blues, Weihnachtslieder und bekannte Akkordfolgen. Vor dem Start siehst du alle Griffbilder der Folge. Eingeben musst du nichts.
+
+Enthalten sind gemeinfreie Stücke und Übungen, nur die Akkordfolgen, keine Texte und keine Noten. Eigene Lieder lassen sich darunter weiterhin von Hand anlegen.
 
 **Verlauf:** Notenverlauf, Fehlerquote je Akkord, Export als CSV (öffnet direkt in Excel) oder JSON.
 
@@ -59,6 +69,7 @@ Nach jeder Kalibrierung kannst du frei sitzen: Die Haltungswerte werden aus den 
 | `app.js` | Ablauf, Bewertung, Verlauf, Export |
 | `vision.js` | Körper- und Handerkennung, Messwerte, Fehlstellungen, Voreinstellung (`DEFAULT_RULES`) |
 | `calib.js` | Kalibrierungsschritte, Statistik, Ableitung der Grenzwerte |
+| `songbook.js` | Mitgelieferter Liederfundus |
 | `listen.js` | Sprachbefehle und Klatsch-Erkennung |
 | `audio.js` | Anschlag- und Akkorderkennung |
 | `chords.js` | Akkorde, Griffbilder |
@@ -75,6 +86,8 @@ Am einfachsten über die Kalibrierung. Wer von Hand nachstellen will: `DEFAULT_R
 - Die Akkordprüfung funktioniert am besten mit einzelnen Anschlägen und kurzen Pausen, schlechter bei schnellem Wechsel oder Zupfmustern.
 - Wie fest du drückst, sieht die App nicht.
 - Fingerhaltung und Akkordfehler werden nicht mitkalibriert, dort gelten feste Werte.
+- Der Zeigefinger wird bewusst nicht auf flache Haltung geprüft, weil er beim Barré richtigerweise flach liegt.
+- Im Fingermodus wird die Körperhaltung nur geprüft, wenn der Oberkörper beim Einrichten im Bild war.
 - Der Zuruf ist nur in der Kalibrierung aktiv, nicht beim normalen Üben.
 - Die Klatsch-Erkennung kann von anderen kurzen, scharfen Geräuschen ausgelöst werden. Schlimmstenfalls startet ein Schritt zu früh, dann hilft „wiederholen“.
 - Bei anhaltenden Schmerzen bitte ärztlich oder physiotherapeutisch abklären lassen.

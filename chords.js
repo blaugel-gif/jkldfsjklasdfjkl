@@ -43,6 +43,17 @@ const SHAPES = {
   'H7':    { frets: [null, 2, 1, 2, 0, 2], fingers: [0, 2, 1, 3, 0, 4] },
   'Hm':    { frets: [null, 2, 4, 4, 3, 2], fingers: [0, 1, 3, 4, 2, 1], barre: 2 },
   'Bm':    { frets: [null, 1, 3, 3, 2, 1], fingers: [0, 1, 3, 4, 2, 1], barre: 1 }, // b-Moll (deutsch)
+  // Barré-Griffe
+  'B':     { frets: [null, 1, 3, 3, 3, 1], fingers: [0, 1, 2, 3, 4, 1], barre: 1 }, // deutsch B = englisch Bb
+  'H':     { frets: [null, 2, 4, 4, 4, 2], fingers: [0, 1, 2, 3, 4, 1], barre: 2 },
+  'F#':    { frets: [2, 4, 4, 3, 2, 2], fingers: [1, 3, 4, 2, 1, 1], barre: 2 },
+  'F#m':   { frets: [2, 4, 4, 2, 2, 2], fingers: [1, 3, 4, 1, 1, 1], barre: 2 },
+  'C#m':   { frets: [null, 4, 6, 6, 5, 4], fingers: [0, 1, 3, 4, 2, 1], barre: 4 },
+  'G#':    { frets: [4, 6, 6, 5, 4, 4], fingers: [1, 3, 4, 2, 1, 1], barre: 4 },
+  'D#':    { frets: [6, 8, 8, 7, 6, 6], fingers: [1, 3, 4, 2, 1, 1], barre: 6 },
+  'Gm':    { frets: [3, 5, 5, 3, 3, 3], fingers: [1, 3, 4, 1, 1, 1], barre: 3 },
+  'Cm':    { frets: [null, 3, 5, 5, 4, 3], fingers: [0, 1, 3, 4, 2, 1], barre: 3 },
+  'Fm':    { frets: [1, 3, 3, 1, 1, 1], fingers: [1, 3, 4, 1, 1, 1], barre: 1 },
 };
 
 // Liest einen Akkordnamen wie "Am", "Fis7", "G/H", "Bb" oder "Es"

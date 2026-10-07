@@ -160,6 +160,20 @@ export const METRIC_KEYS = [
 // abs = nur der Betrag der Abweichung zählt (Richtung unklar), sonst entscheidet dir.
 export const CATEGORIES = { schulter: 'Schultern', handgelenk: 'Handgelenke', kopf: 'Kopfhaltung', ruecken: 'Rücken', arm: 'Arme' };
 
+// Kurztext für die Beschriftung direkt im Videobild
+export const FAULT_TAGS = {
+  schulter_hoch: 'Schultern locker',
+  handgelenk_greif: 'Handgelenk gerade',
+  handgelenk_anschlag: 'Handgelenk gerade',
+  kopf_vor: 'Kopf hoch',
+  rundruecken: 'Aufrichten',
+  seitlich: 'Gerade sitzen',
+  ellbogen: 'Ellbogen ran',
+  finger_flach: 'Finger steiler',
+  kleiner_finger_weg: 'Kleiner Finger ran',
+  daumen_hoch: 'Daumen runter',
+};
+
 export const FAULTS = {
   schulter_hoch:       { category: 'schulter',   label: 'Schultern hochgezogen',        hint: 'Schultern locker sinken lassen' },
   handgelenk_greif:    { category: 'handgelenk', label: 'Greifhand abgeknickt',         hint: 'Greifhand: Handgelenk gerader halten – Gitarrenhals etwas anheben' },
@@ -243,13 +257,32 @@ export function pickHand(result) {
 export function fingerIssues(hand) {
   const w = hand.world, issues = [];
   const palm = len(sub(w[0], w[9])) || 1e-6;
+
+  // Flache Finger: durchgestreckt statt aufgestellt. Ein gut gegriffener Finger
+  // ist im Mittel- und Endgelenk gebeugt, die Kuppe steht senkrecht auf der Saite.
+  // Der Zeigefinger bleibt ausgenommen, er liegt beim Barré absichtlich flach.
   const flat = [];
   for (const [name, [mcp, pip, dip, tip]] of Object.entries(FINGERS)) {
-    if (angle3(w[mcp], w[pip], w[dip]) < 150 && angle3(w[pip], w[dip], w[tip]) > 172) flat.push(name);
+    if (name === 'Zeigefinger') continue;
+    const pipA = angle3(w[mcp], w[pip], w[dip]);
+    const dipA = angle3(w[pip], w[dip], w[tip]);
+    if (pipA > 160 && dipA > 165) flat.push(name);
   }
-  if (flat.length) issues.push({ key: 'finger_flach', fingers: flat, text: `${flat[0]} flach – Fingerkuppe steiler aufsetzen` });
+  if (flat.length) issues.push({ key: 'finger_flach', fingers: flat, anchor: FINGERS[flat[0]][1],
+    text: `${flat[0]} flach – Fingerkuppe steiler aufsetzen` });
+
+  // Kleiner Finger steht weit ab
   if (angle3(w[17], w[18], w[19]) > 160 && angle3(w[18], w[19], w[20]) > 160 && len(sub(w[20], w[16])) / palm > 0.9)
-    issues.push({ key: 'kleiner_finger_weg', text: 'Kleiner Finger: locker nah am Griffbrett halten' });
+    issues.push({ key: 'kleiner_finger_weg', anchor: 20, text: 'Kleiner Finger: locker nah am Griffbrett halten' });
+
+  // Daumen über den Hals gehakt: die Kuppe steht über der Knöchellinie.
+  // Das zieht das Handgelenk krumm und ist eine häufige Ursache für Unterarmschmerzen.
+  const knuckle = mid(w[5], w[17]);
+  const palmDir = unit(sub(knuckle, w[0]));
+  const thumbRise = dot(sub(w[4], knuckle), palmDir) / palm;
+  if (thumbRise > 0.25)
+    issues.push({ key: 'daumen_hoch', anchor: 4, text: 'Daumen hinter den Hals, nicht darüber haken' });
+
   return issues;
 }
 
@@ -287,6 +320,62 @@ export function drawPose(ctx, image, w, h, active, leftHanded) {
     ctx.beginPath(); ctx.moveTo(pa.x * w, pa.y * h); ctx.lineTo(pb.x * w, pb.y * h); ctx.stroke();
   }
   void fretHand;
+}
+
+// Beschriftete Markierung an einem Punkt des Bildes.
+// items: [{ x, y, text }] in Bildkoordinaten 0..1
+export function drawLabels(ctx, items, w, h, mirrored) {
+  if (!items || !items.length) return;
+  // Das Video ist meist Querformat und wird im Hochformat gestaucht,
+  // deshalb grosszuegig bemessen
+  const size = Math.max(18, Math.round(h / 22));
+  ctx.font = `700 ${size}px "Bricolage Grotesque", system-ui, sans-serif`;
+  ctx.textBaseline = 'middle';
+  const placed = [];
+  for (const it of items) {
+    const px = it.x * w, py = it.y * h;
+    // Beschriftungen nicht übereinander legen
+    let ly = py - size * 1.8;
+    while (placed.some(p => Math.abs(p - ly) < size * 1.7)) ly -= size * 1.7;
+    placed.push(ly);
+
+    ctx.strokeStyle = '#E0533D';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px, ly + size * 0.7); ctx.stroke();
+    ctx.fillStyle = '#E0533D';
+    ctx.beginPath(); ctx.arc(px, py, size * 0.42, 0, Math.PI * 2); ctx.fill();
+
+    ctx.save();
+    ctx.translate(px, ly);
+    if (mirrored) ctx.scale(-1, 1);   // sonst stünde die Schrift seitenverkehrt
+    const tw = ctx.measureText(it.text).width;
+    const padX = size * 0.45, bw = tw + padX * 2, bh = size * 1.5;
+    // Beschriftung im Bild halten
+    let bx = -bw / 2;
+    const leftEdge = mirrored ? px - w : -px;
+    const rightEdge = leftEdge + w;
+    bx = Math.max(leftEdge + 6, Math.min(bx, rightEdge - bw - 6));
+    ctx.fillStyle = 'rgba(42, 27, 23, 0.9)';
+    ctx.beginPath(); ctx.roundRect(bx, -bh / 2, bw, bh, bh / 2); ctx.fill();
+    ctx.fillStyle = '#F3E6C8';
+    ctx.fillText(it.text, bx + padX, 1);
+    ctx.restore();
+  }
+}
+
+// Wo im Bild ein Haltungsfehler angezeigt wird
+export function faultAnchor(fault, image, leftHanded) {
+  const f = leftHanded ? 'r' : 'l', o = leftHanded ? 'l' : 'r';
+  const pick = {
+    schulter_hoch: mid(image[P.lSh], image[P.rSh]),
+    rundruecken: mid(mid(image[P.lSh], image[P.rSh]), mid(image[P.lHip], image[P.rHip])),
+    seitlich: mid(image[P.lHip], image[P.rHip]),
+    kopf_vor: image[P.nose],
+    handgelenk_greif: image[P[f + 'Wr']],
+    handgelenk_anschlag: image[P[o + 'Wr']],
+    ellbogen: image[P[f + 'El']],
+  }[fault];
+  return pick ? { x: pick.x, y: pick.y } : null;
 }
 
 const HAND_LINKS = [[0, 1], [1, 2], [2, 3], [3, 4], [0, 5], [5, 6], [6, 7], [7, 8], [5, 9], [9, 10], [10, 11], [11, 12],

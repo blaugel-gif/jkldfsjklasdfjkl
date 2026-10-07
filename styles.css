@@ -248,3 +248,26 @@ th { color: var(--nickel); font-weight: 400; font-size: 14px; }
 .voicebar.heard .dot { background: var(--spruce); }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .35; } }
 @media (prefers-reduced-motion: reduce) { .voicebar.listening .dot { animation: none; } }
+
+/* Liedauswahl */
+.picker { display: grid; gap: 12px; margin-bottom: 20px; }
+.picker > label { display: grid; gap: 5px; }
+select#songPick { width: 100%; font-size: 17px; }
+.levelfilter { display: flex; flex-wrap: wrap; gap: 7px; }
+.levelfilter button {
+  background: none; border: 1.5px solid var(--spruce-dim); color: var(--spruce);
+  border-radius: 999px; padding: 7px 14px; font-size: 14px;
+}
+.levelfilter button.on { background: var(--spruce); color: var(--rosewood); border-color: var(--spruce); font-weight: 700; }
+.preview { display: grid; gap: 12px; }
+.preview[hidden] { display: none; }
+.chordrow { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; }
+.chordrow figure { margin: 0; flex: none; width: 92px; text-align: center; }
+.chordrow figcaption { font-family: var(--font-head); font-size: 17px; margin-top: 2px; }
+.chordrow .diagram { width: 92px; }
+.order { margin: 0; font-size: 15px; color: var(--nickel); }
+h3.sub { font-size: 19px; color: var(--nickel); margin: 24px 0 10px; font-weight: 500; }
+
+/* Freiwilliger Punkt im Aufstellungs-Check */
+.setup li.opt::before { background: var(--warn); }
+.setup li small { font-size: 14px; }
